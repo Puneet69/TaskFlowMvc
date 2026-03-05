@@ -1,0 +1,622 @@
+@using TaskStatus = TaskFlowMvc.Models.TaskStatus
+@model TaskFlowMvc.ViewModels.ProjectDetailsViewModel
+@{
+    ViewData["Title"] = "Project Details";
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var todo = Model.Tasks.Where(t => t.Status == TaskStatus.Todo).ToList();
+    var inProgress = Model.Tasks.Where(t => t.Status == TaskStatus.InProgress).ToList();
+    var completed = Model.Tasks.Where(t => t.Status == TaskStatus.Completed).ToList();
+
+    static bool IsImage(TaskFlowMvc.Models.FileAttachment file) =>
+        file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsVideo(TaskFlowMvc.Models.FileAttachment file) =>
+        file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsPdf(TaskFlowMvc.Models.FileAttachment file) =>
+        file.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ||
+        file.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+
+    static string FormatMinutes(int minutes)
+    {
+        var safe = Math.Max(0, minutes);
+        var hours = safe / 60;
+        var remainingMinutes = safe % 60;
+        return hours > 0 ? $"{hours}h {remainingMinutes}m" : $"{remainingMinutes}m";
+    }
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">@Model.Project.Name</h1>
+    <p class="text-muted mb-1">@Model.Project.Description</p>
+    <div class="d-flex gap-2">
+        <span class="badge text-bg-secondary">Status: @Model.Project.Status</span>
+        <span class="badge text-bg-light">Team: @(Model.Project.Team?.Name ?? "Unassigned")</span>
+        <a asp-action="Timeline" asp-route-id="@Model.Project.Id" class="btn btn-sm btn-outline-secondary">View Timeline</a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-xl-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5>Add Task</h5>
+                <form asp-action="CreateTask" method="post" class="row g-3">
+                    <input type="hidden" name="ProjectId" value="@Model.Project.Id" />
+                    <div class="col-md-6">
+                        <label class="form-label">Title</label>
+                        <input name="Title" class="form-control" maxlength="200" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Due Date</label>
+                        <input name="DueDate" type="date" class="form-control" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Priority</label>
+                        <select name="Priority" class="form-select">
+                            @foreach (var value in Enum.GetValues<TaskFlowMvc.Models.TaskPriority>())
+                            {
+                                <option value="@value">@value</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <select name="Status" class="form-select">
+                            @foreach (var value in Enum.GetValues<TaskStatus>())
+                            {
+                                <option value="@value">@value</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Assignee</label>
+                        <select name="AssignedToId" class="form-select">
+                            <option value="">Unassigned</option>
+                            @foreach (var member in Model.TeamMembers)
+                            {
+                                <option value="@member.UserId">@member.User?.Email</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Labels/Tags (comma-separated)</label>
+                        <input name="LabelsCsv" class="form-control" placeholder="backend,urgent,qa" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Recurring</label>
+                        <select name="RecurrenceType" class="form-select">
+                            @foreach (var value in Enum.GetValues<TaskRecurrenceType>())
+                            {
+                                <option value="@value">@value</option>
+                            }
+                        </select>
+                        <input type="hidden" name="IsRecurring" value="true" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <textarea name="Description" class="form-control" maxlength="1000" required></textarea>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" type="submit">Create Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5>Add Milestone</h5>
+                <form asp-action="AddMilestone" method="post" class="d-grid gap-2">
+                    <input type="hidden" name="ProjectId" value="@Model.Project.Id" />
+                    <input name="Title" class="form-control" placeholder="Milestone title" maxlength="200" required />
+                    <textarea name="Description" class="form-control" placeholder="Description (optional)" maxlength="1000"></textarea>
+                    <input name="DueDate" type="date" class="form-control" required />
+                    <button class="btn btn-outline-primary" type="submit">Add Milestone</button>
+                </form>
+                <hr />
+                <h6 class="mb-2">Milestones</h6>
+                @if (!Model.Milestones.Any())
+                {
+                    <p class="text-muted mb-0">No milestones yet.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var milestone in Model.Milestones)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">@milestone.Title</div>
+                                    <small class="text-muted">@milestone.DueDate.ToString("dd MMM yyyy")</small>
+                                </div>
+                                @if (!milestone.IsCompleted)
+                                {
+                                    <form asp-action="CompleteMilestone" method="post">
+                                        <input type="hidden" name="milestoneId" value="@milestone.Id" />
+                                        <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success">Done</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-success">Completed</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h5>Filters</h5>
+        <form method="get" asp-action="Details" class="row g-2">
+            <input type="hidden" name="id" value="@Model.Project.Id" />
+            <div class="col-md-3">
+                <select class="form-select" name="statusFilter">
+                    <option value="">All Statuses</option>
+                    @foreach (var status in Enum.GetValues<TaskStatus>())
+                    {
+                        <option value="@status" selected="@(Model.StatusFilter == status)">@status</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="priorityFilter">
+                    <option value="">All Priorities</option>
+                    @foreach (var priority in Enum.GetValues<TaskFlowMvc.Models.TaskPriority>())
+                    {
+                        <option value="@priority" selected="@(Model.PriorityFilter == priority)">@priority</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="assigneeFilter">
+                    <option value="">All assignees</option>
+                    @foreach (var member in Model.TeamMembers)
+                    {
+                        <option value="@member.UserId" selected="@(Model.AssigneeFilter == member.UserId)">@member.User?.Email</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input class="form-control" name="labelFilter" value="@Model.LabelFilter" placeholder="tag label" />
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary">Apply</button>
+                <a asp-action="Details" asp-route-id="@Model.Project.Id" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Kanban Board (Drag & Drop)</h5>
+            <small class="text-muted">Drag task cards to update status. Click column title to collapse.</small>
+        </div>
+        <form id="kanbanAntiforgery">
+            @Html.AntiForgeryToken()
+        </form>
+        <div class="kanban-grid">
+            <div class="kanban-column">
+                <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">Todo</button>
+                <div class="kanban-list" data-status="Todo">
+                    @foreach (var task in todo)
+                    {
+                        <div class="kanban-card" data-task-id="@task.Id">
+                            <div class="fw-semibold">@task.Title</div>
+                            <small class="text-muted d-block">@task.DueDate.ToString("dd MMM") - @task.Priority</small>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="kanban-column">
+                <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">In Progress</button>
+                <div class="kanban-list" data-status="InProgress">
+                    @foreach (var task in inProgress)
+                    {
+                        <div class="kanban-card" data-task-id="@task.Id">
+                            <div class="fw-semibold">@task.Title</div>
+                            <small class="text-muted d-block">@task.DueDate.ToString("dd MMM") - @task.Priority</small>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="kanban-column">
+                <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">Completed</button>
+                <div class="kanban-list" data-status="Completed">
+                    @foreach (var task in completed)
+                    {
+                        <div class="kanban-card" data-task-id="@task.Id">
+                            <div class="fw-semibold">@task.Title</div>
+                            <small class="text-muted d-block">@task.DueDate.ToString("dd MMM") - @task.Priority</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="mb-3">Tasks</h5>
+        @if (!Model.Tasks.Any())
+        {
+            <p class="text-muted mb-0">No tasks found for this project.</p>
+        }
+        else
+        {
+            <form asp-action="BulkUpdateStatus" id="bulkStatusForm" method="post" class="mb-3 d-flex gap-2 align-items-end">
+                <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                <div>
+                    <label class="form-label">Bulk status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        @foreach (var status in Enum.GetValues<TaskStatus>())
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-primary">Apply to selected</button>
+
+                <div class="ms-3">
+                    <label class="form-label">Bulk assignee</label>
+                    <select name="assignedToId" form="bulkAssignForm" class="form-select form-select-sm">
+                        <option value="">Unassigned</option>
+                        @foreach (var member in Model.TeamMembers)
+                        {
+                            <option value="@member.UserId">@member.User?.Email</option>
+                        }
+                    </select>
+                </div>
+            </form>
+            <form asp-action="BulkAssign" id="bulkAssignForm" method="post" class="d-none">
+                <input type="hidden" name="projectId" value="@Model.Project.Id" />
+            </form>
+
+            <table class="table table-striped align-middle">
+                <thead>
+                <tr>
+                    <th></th>
+                    <th>Title</th>
+                    <th>Assignee</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Due Date</th>
+                    <th>Labels</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var task in Model.Tasks)
+                {
+                    var taskMinutes = Model.TaskMinutesSpent.ContainsKey(task.Id) ? Model.TaskMinutesSpent[task.Id] : 0;
+                    var isTimerActive = Model.ActiveTimerTaskIds.Contains(task.Id);
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="task-select" value="@task.Id" />
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@task.Title</div>
+                            <div class="small text-muted">@task.Description</div>
+                            <div class="small text-muted">Tracked: @FormatMinutes(taskMinutes) @(isTimerActive ? "(timer running)" : string.Empty)</div>
+                            @if (task.SubTasks.Any())
+                            {
+                                <div class="small text-muted">Subtasks: @task.SubTasks.Count</div>
+                                <ul class="small mb-1">
+                                    @foreach (var sub in task.SubTasks.OrderBy(s => s.DueDate))
+                                    {
+                                        <li>@sub.Title (@sub.Status, due @sub.DueDate.ToString("dd MMM"))</li>
+                                    }
+                                </ul>
+                            }
+                            @if (task.Dependencies.Any())
+                            {
+                                <div class="small text-muted">Dependencies: @task.Dependencies.Count</div>
+                            }
+                            <details class="mt-2">
+                                <summary class="small">Add subtask</summary>
+                                <form asp-action="AddSubTask" method="post" class="row g-1 mt-1">
+                                    <input type="hidden" name="parentTaskId" value="@task.Id" />
+                                    <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                    <div class="col-md-4">
+                                        <input type="text" name="title" class="form-control form-control-sm" maxlength="200" placeholder="Subtask title" required />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" name="description" class="form-control form-control-sm" maxlength="1000" placeholder="Description" required />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="date" name="dueDate" class="form-control form-control-sm" required />
+                                    </div>
+                                    <div class="col-md-1">
+                                        <select name="priority" class="form-select form-select-sm">
+                                            @foreach (var p in Enum.GetValues<TaskFlowMvc.Models.TaskPriority>())
+                                            {
+                                                <option value="@p">@p</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="submit" class="btn btn-sm btn-outline-success w-100">Add</button>
+                                    </div>
+                                </form>
+                            </details>
+                        </td>
+                        <td>
+                            <form asp-action="AssignTask" method="post" class="d-flex gap-2">
+                                <input type="hidden" name="taskId" value="@task.Id" />
+                                <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                <select name="assignedToId" class="form-select form-select-sm">
+                                    <option value="">Unassigned</option>
+                                    @foreach (var member in Model.TeamMembers)
+                                    {
+                                        <option value="@member.UserId" selected="@(task.AssignedToId == member.UserId)">@member.User?.Email</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Set</button>
+                            </form>
+                        </td>
+                        <td><span class="badge bg-secondary">@task.Priority</span></td>
+                        <td>
+                            <form asp-action="UpdateTaskStatus" method="post" class="d-flex gap-2">
+                                <input type="hidden" name="taskId" value="@task.Id" />
+                                <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                <select name="status" class="form-select form-select-sm">
+                                    @foreach (var status in Enum.GetValues<TaskStatus>())
+                                    {
+                                        <option value="@status" selected="@(task.Status == status)">@status</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                            </form>
+                        </td>
+                        <td>@task.DueDate.ToString("dd MMM yyyy")</td>
+                        <td>@task.LabelsCsv</td>
+                        <td class="d-grid gap-2">
+                            <form asp-action="QuickEditTask" method="post" class="d-flex gap-1">
+                                <input type="hidden" name="taskId" value="@task.Id" />
+                                <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                <input type="text" name="title" value="@task.Title" class="form-control form-control-sm" />
+                                <select name="priority" class="form-select form-select-sm">
+                                    @foreach (var p in Enum.GetValues<TaskFlowMvc.Models.TaskPriority>())
+                                    {
+                                        <option value="@p" selected="@(task.Priority == p)">@p</option>
+                                    }
+                                </select>
+                                <input type="text" name="labelsCsv" value="@task.LabelsCsv" class="form-control form-control-sm" />
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">Quick</button>
+                            </form>
+                            <div class="d-flex gap-2">
+                                <a asp-action="EditTask" asp-route-id="@task.Id" asp-route-projectId="@Model.Project.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <form asp-action="SaveTaskTemplate" method="post">
+                                    <input type="hidden" name="taskId" value="@task.Id" />
+                                    <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                    <input type="hidden" name="templateName" value="Template - @task.Title" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Template</button>
+                                </form>
+                                <form asp-action="DeleteTask" method="post">
+                                    <input type="hidden" name="taskId" value="@task.Id" />
+                                    <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                @if (isTimerActive)
+                                {
+                                    <form asp-action="StopTimer" method="post" class="d-flex gap-1">
+                                        <input type="hidden" name="taskId" value="@task.Id" />
+                                        <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                        <input type="text" name="note" class="form-control form-control-sm" placeholder="Stop note (optional)" />
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">Stop Timer</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="StartTimer" method="post" class="d-flex gap-1">
+                                        <input type="hidden" name="taskId" value="@task.Id" />
+                                        <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                        <input type="text" name="note" class="form-control form-control-sm" placeholder="Start note (optional)" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success">Start Timer</button>
+                                    </form>
+                                }
+                            </div>
+                            <form asp-action="LogTime" method="post" class="d-flex gap-1">
+                                <input type="hidden" name="taskId" value="@task.Id" />
+                                <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                <input type="number" name="minutes" min="1" max="1440" class="form-control form-control-sm" placeholder="Minutes" required />
+                                <input type="text" name="note" class="form-control form-control-sm" placeholder="Manual log note" />
+                                <button type="submit" class="btn btn-sm btn-outline-dark">Log Time</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td colspan="7">
+                            <div class="small fw-semibold mb-2">Comments</div>
+                            @if (!task.Comments.Any())
+                            {
+                                <div class="small text-muted mb-2">No comments yet.</div>
+                            }
+                            else
+                            {
+                                <div class="mb-2">
+                                    @foreach (var comment in task.Comments.OrderByDescending(c => c.CreatedAtUtc))
+                                    {
+                                        <div class="border rounded p-2 mb-2">
+                                            <div class="small text-muted">@comment.AuthorUser?.Email &middot; @comment.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</div>
+                                            <div>@comment.Content</div>
+                                            @if (comment.Attachments.Any())
+                                            {
+                                                <div class="small mt-2 d-grid gap-2">
+                                                    @foreach (var file in comment.Attachments)
+                                                    {
+                                                        <div class="border rounded p-2">
+                                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                                <span class="fw-semibold">@file.FileName</span>
+                                                                <span class="badge text-bg-light">v@file.Version</span>
+                                                                <span class="text-muted">@file.ContentType</span>
+                                                                <a asp-controller="Attachments" asp-action="Preview" asp-route-id="@file.Id" target="_blank" class="btn btn-sm btn-outline-secondary">Preview</a>
+                                                                <a asp-controller="Attachments" asp-action="Download" asp-route-id="@file.Id" class="btn btn-sm btn-outline-primary">Download</a>
+                                                            </div>
+                                                            @if (IsImage(file))
+                                                            {
+                                                                <img asp-controller="Attachments" asp-action="Preview" asp-route-id="@file.Id" class="img-fluid rounded mt-2" style="max-height:220px;" alt="@file.FileName" />
+                                                            }
+                                                            else if (IsVideo(file))
+                                                            {
+                                                                <video class="w-100 rounded mt-2" style="max-height:280px;" controls>
+                                                                    <source src="@Url.Action("Preview", "Attachments", new { id = file.Id })" type="@file.ContentType" />
+                                                                </video>
+                                                            }
+                                                            else if (IsPdf(file))
+                                                            {
+                                                                <iframe src="@Url.Action("Preview", "Attachments", new { id = file.Id })" class="w-100 rounded mt-2" style="height:280px;"></iframe>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            <div class="d-flex gap-1 mt-2">
+                                                @foreach (var emoji in new[] { "\uD83D\uDC4D", "\uD83C\uDF89", "\u2705", "\uD83D\uDD25" })
+                                                {
+                                                    <form asp-action="ToggleReaction" method="post">
+                                                        <input type="hidden" name="commentId" value="@comment.Id" />
+                                                        <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                                        <input type="hidden" name="emoji" value="@emoji" />
+                                                        <button type="submit" class="btn btn-sm btn-outline-secondary">@emoji @(comment.Reactions.Count(r => r.Emoji == emoji))</button>
+                                                    </form>
+                                                }
+                                            </div>
+                                            @if (comment.AuthorUserId == currentUserId)
+                                            {
+                                                <form asp-action="EditComment" method="post" class="row g-1 mt-2">
+                                                    <input type="hidden" name="commentId" value="@comment.Id" />
+                                                    <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                                    <div class="col-md-10">
+                                                        <input type="text" name="content" value="@comment.Content" class="form-control form-control-sm" />
+                                                    </div>
+                                                    <div class="col-md-2 d-flex gap-1">
+                                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Edit</button>
+                                                        <button formaction="@Url.Action("DeleteComment", "Projects")" class="btn btn-sm btn-outline-danger">Delete</button>
+                                                    </div>
+                                                </form>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            <form asp-action="AddComment" method="post" enctype="multipart/form-data" class="row g-2">
+                                <input type="hidden" name="taskId" value="@task.Id" />
+                                <input type="hidden" name="projectId" value="@Model.Project.Id" />
+                                <div class="col-md-8">
+                                    <input type="text" name="content" class="form-control form-control-sm" placeholder="Add comment. Mention with @@email, @@username, or @@userId" required />
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="file" name="files" class="form-control form-control-sm" multiple />
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">Add</button>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script>
+        const projectId = @Model.Project.Id;
+        const tokenInput = document.querySelector('#kanbanAntiforgery input[name="__RequestVerificationToken"]');
+        const antiForgeryToken = tokenInput ? tokenInput.value : '';
+        const lists = document.querySelectorAll('.kanban-list');
+
+        document.querySelectorAll('.kanban-collapse').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const list = btn.nextElementSibling;
+                if (!list) return;
+                list.classList.toggle('d-none');
+            });
+        });
+
+        lists.forEach((list) => {
+            new Sortable(list, {
+                group: 'tasks',
+                animation: 150,
+                onEnd: async function (evt) {
+                    const card = evt.item;
+                    const taskId = card.dataset.taskId;
+                    const newStatus = evt.to.dataset.status;
+
+                    try {
+                        const body = new URLSearchParams();
+                        body.append('__RequestVerificationToken', antiForgeryToken);
+                        body.append('taskId', taskId);
+                        body.append('projectId', projectId);
+                        body.append('status', newStatus);
+
+                        const response = await fetch('/Projects/UpdateTaskStatus', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: body.toString()
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Status update failed');
+                        }
+                    } catch (e) {
+                        alert('Unable to update task status. Page will reload.');
+                        window.location.reload();
+                    }
+                }
+            });
+        });
+
+        const selectedInputs = () => Array.from(document.querySelectorAll('.task-select:checked')).map(x => x.value);
+        const bulkStatusForm = document.getElementById('bulkStatusForm');
+        if (bulkStatusForm) {
+            bulkStatusForm.addEventListener('submit', () => {
+                const ids = selectedInputs();
+                ids.forEach(id => {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'taskIds';
+                    hidden.value = id;
+                    bulkStatusForm.appendChild(hidden);
+                });
+            });
+        }
+        const bulkAssignForm = document.getElementById('bulkAssignForm');
+        if (bulkAssignForm) {
+            const assignSelect = document.querySelector('select[name="assignedToId"][form="bulkAssignForm"]');
+            if (assignSelect) {
+                assignSelect.addEventListener('change', () => {
+                    const ids = selectedInputs();
+                    bulkAssignForm.querySelectorAll('input[name="taskIds"]').forEach(x => x.remove());
+                    ids.forEach(id => {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'taskIds';
+                        hidden.value = id;
+                        bulkAssignForm.appendChild(hidden);
+                    });
+                    if (ids.length > 0) {
+                        bulkAssignForm.submit();
+                    }
+                });
+            }
+        }
+    </script>
+}

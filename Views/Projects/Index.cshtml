@@ -1,0 +1,99 @@
+@model List<TaskFlowMvc.Models.Project>
+@{
+    ViewData["Title"] = "Projects";
+    var teams = ViewBag.Teams as List<TaskFlowMvc.Models.Team> ?? new();
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">Projects</h1>
+    <p class="text-muted mb-0">Plan, track, and manage project delivery with teams, milestones, and timelines.</p>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h5>Create Project</h5>
+        <form asp-action="Create" method="post">
+            <div class="mb-3">
+                <label class="form-label">Name</label>
+                <input name="Name" class="form-control" maxlength="100" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="Description" class="form-control" maxlength="500" required></textarea>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Status</label>
+                    <select name="Status" class="form-select">
+                        @foreach (var status in Enum.GetValues<ProjectStatus>())
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Team (optional)</label>
+                    <select name="TeamId" class="form-select">
+                        <option value="">Unassigned</option>
+                        @foreach (var team in teams)
+                        {
+                            <option value="@team.Id">@team.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" type="submit">Save Project</button>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="mb-3">Project List</h5>
+        @if (!Model.Any())
+        {
+            <p class="text-muted mb-0">No projects created.</p>
+        }
+        else
+        {
+            <table class="table table-striped align-middle">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Team</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var project in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@project.Name</div>
+                            <div class="small text-muted">@project.Description</div>
+                        </td>
+                        <td><span class="badge text-bg-secondary">@project.Status</span></td>
+                        <td>@(project.Team?.Name ?? "Unassigned")</td>
+                        <td>@project.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</td>
+                        <td class="d-flex gap-2">
+                            <a class="btn btn-sm btn-outline-info" asp-action="Details" asp-route-id="@project.Id">Open</a>
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@project.Id">Edit</a>
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="Timeline" asp-route-id="@project.Id">Timeline</a>
+                            <form asp-action="Archive" method="post">
+                                <input type="hidden" name="id" value="@project.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-warning">Archive</button>
+                            </form>
+                            <form asp-action="Delete" method="post">
+                                <input type="hidden" name="id" value="@project.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

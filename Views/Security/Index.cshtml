@@ -1,0 +1,98 @@
+@model SecurityDashboardViewModel
+@{
+    ViewData["Title"] = "Security";
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">Security</h1>
+    <p class="text-muted mb-0">Manage active devices and review sign-in activity.</p>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Active Devices</h5>
+            <form asp-action="LogoutOtherDevices" method="post">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Logout other devices</button>
+            </form>
+        </div>
+        @if (!Model.Sessions.Any())
+        {
+            <p class="text-muted mb-0">No active sessions.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                    <tr>
+                        <th>Device</th>
+                        <th>IP</th>
+                        <th>Last seen (UTC)</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var session in Model.Sessions)
+                    {
+                        <tr>
+                            <td>@session.DeviceName</td>
+                            <td>@session.IpAddress</td>
+                            <td>@session.LastSeenAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="text-end">
+                                @if (string.Equals(session.SessionKey, Model.CurrentSessionKey, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <span class="badge text-bg-success">Current</span>
+                                }
+                                else
+                                {
+                                    <form asp-action="RevokeDevice" method="post" class="d-inline">
+                                        <input type="hidden" name="sessionKey" value="@session.SessionKey" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="mb-3">Login Activity</h5>
+        @if (!Model.LoginActivities.Any())
+        {
+            <p class="text-muted mb-0">No activity available.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                    <tr>
+                        <th>Time (UTC)</th>
+                        <th>Type</th>
+                        <th>IP</th>
+                        <th>Details</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.LoginActivities)
+                    {
+                        <tr>
+                            <td>@item.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@item.ActivityType</td>
+                            <td>@item.IpAddress</td>
+                            <td>@item.Details</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

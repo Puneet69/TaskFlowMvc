@@ -1,0 +1,210 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - TaskFlow</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/TaskFlowMvc.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Dashboard" asp-action="Index">TaskFlow</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Projects" asp-action="Index">Projects</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Teams" asp-action="Index">Teams</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Timeline" asp-action="Index">Timeline</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Notifications" asp-action="Index">
+                                Notifications
+                                <span id="notifCountBadge" class="badge bg-danger ms-1 d-none">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Security" asp-action="Index">Security</a>
+                        </li>
+                        @if (User.IsInRole(AppRoles.Admin))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="AdminUsers" asp-action="Index">Admin</a>
+                            </li>
+                        }
+                    </ul>
+                    <partial name="_LoginPartial" />
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @if (TempData["Success"] is string success)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @success
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["Info"] is string info)
+            {
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    @info
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["Error"] is string error)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @error
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2026 - TaskFlow
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+        <script>
+            (() => {
+                const badge = document.getElementById('notifCountBadge');
+                const unreadUrl = '@Url.Action("UnreadCount", "Notifications")';
+                const notificationsUrl = '@Url.Action("Index", "Notifications")';
+
+                const setCount = (count) => {
+                    if (!badge) return;
+                    const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
+                    if (safeCount > 0) {
+                        badge.textContent = String(safeCount);
+                        badge.classList.remove('d-none');
+                    } else {
+                        badge.textContent = '0';
+                        badge.classList.add('d-none');
+                    }
+                };
+
+                const loadCount = async () => {
+                    try {
+                        const response = await fetch(unreadUrl, { credentials: 'same-origin' });
+                        if (!response.ok) return;
+                        const payload = await response.json();
+                        setCount(payload.count ?? 0);
+                    } catch (e) {
+                        // no-op fallback
+                    }
+                };
+
+                const escapeHtml = (value) => {
+                    return String(value ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#39;');
+                };
+
+                const appendToast = (title, message, linkUrl) => {
+                    const hostId = 'notifToastHost';
+                    let host = document.getElementById(hostId);
+                    if (!host) {
+                        host = document.createElement('div');
+                        host.id = hostId;
+                        host.className = 'toast-container position-fixed top-0 end-0 p-3';
+                        document.body.appendChild(host);
+                    }
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'toast';
+                    wrapper.setAttribute('role', 'alert');
+                    wrapper.setAttribute('aria-live', 'assertive');
+                    wrapper.setAttribute('aria-atomic', 'true');
+                    const safeTitle = escapeHtml(title || 'Notification');
+                    const safeMessage = escapeHtml(message || '');
+                    const safeLink = escapeHtml(linkUrl || notificationsUrl);
+                    wrapper.innerHTML = `
+                        <div class="toast-header">
+                            <strong class="me-auto">${safeTitle}</strong>
+                            <small>just now</small>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${safeMessage}
+                            <div class="mt-2">
+                                <a class="btn btn-sm btn-outline-primary" href="${safeLink}">Open</a>
+                            </div>
+                        </div>`;
+                    host.appendChild(wrapper);
+                    const toast = bootstrap.Toast.getOrCreateInstance(wrapper, { delay: 5000 });
+                    toast.show();
+                    wrapper.addEventListener('hidden.bs.toast', () => wrapper.remove());
+                };
+
+                const startSignalR = async () => {
+                    if (!window.signalR) {
+                        return false;
+                    }
+
+                    try {
+                        const connection = new signalR.HubConnectionBuilder()
+                            .withUrl('/hubs/notifications')
+                            .withAutomaticReconnect()
+                            .build();
+
+                        connection.on('notificationReceived', payload => {
+                            if (!payload) return;
+                            setCount(payload.unreadCount ?? 0);
+                            appendToast(payload.title, payload.message, payload.linkUrl);
+                        });
+
+                        connection.on('notificationCountUpdated', payload => {
+                            setCount(payload?.unreadCount ?? 0);
+                        });
+
+                        await connection.start();
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
+                };
+
+                loadCount();
+                startSignalR().then(started => {
+                    if (!started) {
+                        window.setInterval(loadCount, 15000);
+                    }
+                });
+            })();
+        </script>
+    }
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,108 @@
+@model AdminUsersViewModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">User & Role Management</h1>
+    <p class="text-muted mb-0">Create users, invite by email, assign roles, and disable/enable accounts.</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5>Create User</h5>
+                <form asp-action="Create" method="post" class="d-grid gap-2">
+                    <input asp-for="NewUser.Email" class="form-control" placeholder="email@example.com" />
+                    <input asp-for="NewUser.Password" class="form-control" />
+                    <select asp-for="NewUser.Role" class="form-select" asp-items="@(new Microsoft.AspNetCore.Mvc.Rendering.SelectList(Model.AvailableRoles))"></select>
+                    <div class="form-check">
+                        <input asp-for="NewUser.EmailConfirmed" class="form-check-input" />
+                        <label asp-for="NewUser.EmailConfirmed" class="form-check-label"></label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5>Invite User by Email</h5>
+                <form asp-action="Invite" method="post" class="d-grid gap-2">
+                    <input asp-for="InviteUser.Email" class="form-control" placeholder="email@example.com" />
+                    <select asp-for="InviteUser.Role" class="form-select" asp-items="@(new Microsoft.AspNetCore.Mvc.Rendering.SelectList(Model.AvailableRoles))"></select>
+                    <button type="submit" class="btn btn-outline-primary">Send Invite</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="mb-3">Users</h5>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.Users)
+                {
+                    var user = row.User;
+                    var role = row.Roles.FirstOrDefault() ?? AppRoles.Viewer;
+                    <tr>
+                        <td>@user.Email</td>
+                        <td>
+                            <form asp-action="SetRole" method="post" class="d-flex gap-2">
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <select name="role" class="form-select form-select-sm">
+                                    @foreach (var item in Model.AvailableRoles)
+                                    {
+                                        <option value="@item" selected="@(item == role)">@item</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                            </form>
+                        </td>
+                        <td>
+                            @if (user.IsDisabled)
+                            {
+                                <span class="badge text-bg-danger">Disabled</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                        </td>
+                        <td>
+                            @if (user.IsDisabled)
+                            {
+                                <form asp-action="Enable" method="post" class="d-inline">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Enable</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-action="Disable" method="post" class="d-inline d-flex gap-2">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <input type="text" name="reason" class="form-control form-control-sm" placeholder="reason (optional)" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Disable</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,82 @@
+@model NotificationsViewModel
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">Notifications</h1>
+    <p class="text-muted mb-0">In-app alerts for task, comment, and mention activity.</p>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Unread</h5>
+            <form asp-action="MarkAllRead" method="post">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Mark all as read</button>
+            </form>
+        </div>
+        @if (!Model.Unread.Any())
+        {
+            <p class="text-muted mb-0">No unread notifications.</p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var item in Model.Unread)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-semibold">@item.Title</div>
+                            <div class="small text-muted">@item.Message</div>
+                            @if (!string.IsNullOrWhiteSpace(item.LinkUrl))
+                            {
+                                <a href="@item.LinkUrl" class="small">Open</a>
+                            }
+                        </div>
+                        <form asp-action="MarkRead" method="post">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Mark read</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="mb-3">Recent</h5>
+        @if (!Model.Recent.Any())
+        {
+            <p class="text-muted mb-0">No notifications yet.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                    <tr>
+                        <th>When (UTC)</th>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.Recent)
+                    {
+                        <tr>
+                            <td>@item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@item.Type</td>
+                            <td>@item.Title</td>
+                            <td>@(item.IsRead ? "Read" : "Unread")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

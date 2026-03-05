@@ -1,0 +1,212 @@
+@model TeamDetailsViewModel
+@{
+    ViewData["Title"] = $"Team - {Model.Team.Name}";
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var currentMember = Model.Members.FirstOrDefault(m => m.UserId == currentUserId);
+    var canManage = currentMember?.Role == TeamMemberRole.TeamLeader;
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">@Model.Team.Name</h1>
+    <p class="text-muted mb-0">@Model.Team.Description</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Invite Member</h5>
+                <form asp-action="Invite" asp-route-id="@Model.Team.Id" method="post" class="d-grid gap-3">
+                    <div>
+                        <label asp-for="InviteModel.Email" class="form-label"></label>
+                        <input asp-for="InviteModel.Email" class="form-control" placeholder="name@example.com" />
+                        <span asp-validation-for="InviteModel.Email" class="text-danger"></span>
+                    </div>
+                    <div>
+                        <label asp-for="InviteModel.Role" class="form-label">Role</label>
+                        <select asp-for="InviteModel.Role" class="form-select" asp-items="Html.GetEnumSelectList<TeamMemberRole>()"></select>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Send Invite</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Team Workload</h5>
+                @if (!Model.WorkloadByUser.Any())
+                {
+                    <p class="text-muted mb-0">No workload data available.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Open Tasks</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var item in Model.WorkloadByUser.OrderByDescending(i => i.Value))
+                            {
+                                <tr>
+                                    <td>@item.Key</td>
+                                    <td>@item.Value</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Members</h5>
+        @if (!Model.Members.Any())
+        {
+            <div class="empty-state">
+                <p class="text-muted mb-0">No members in this team yet.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var member in Model.Members)
+                    {
+                        <tr>
+                            <td>@(member.User?.Email ?? "Unknown user")</td>
+                            <td>
+                                @if (canManage && member.UserId != currentUserId)
+                                {
+                                    <form asp-action="ChangeRole" method="post" class="d-flex gap-2">
+                                        <input type="hidden" name="teamId" value="@Model.Team.Id" />
+                                        <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                        <select name="role" class="form-select form-select-sm">
+                                            @foreach (var role in Enum.GetValues<TeamMemberRole>())
+                                            {
+                                                <option value="@role" selected="@(member.Role == role)">@role</option>
+                                            }
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-secondary">@member.Role</span>
+                                }
+                            </td>
+                            <td>@member.JoinedAt.ToLocalTime().ToString("dd MMM yyyy")</td>
+                            <td class="text-end">
+                                @if (canManage && member.UserId != currentUserId)
+                                {
+                                    <form asp-action="RemoveMember" method="post" class="d-inline">
+                                        <input type="hidden" name="teamId" value="@Model.Team.Id" />
+                                        <input type="hidden" name="memberUserId" value="@member.UserId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                    </form>
+
+                                    <form asp-action="TransferLeadership" method="post" class="d-inline ms-2">
+                                        <input type="hidden" name="teamId" value="@Model.Team.Id" />
+                                        <input type="hidden" name="newLeaderUserId" value="@member.UserId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">Make Leader</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h5 class="mb-3">Pending Invitations</h5>
+        @if (!Model.PendingInvitations.Any())
+        {
+            <div class="empty-state">
+                <p class="text-muted mb-0">No pending invitations.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Invited By</th>
+                            <th>Expires</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var invite in Model.PendingInvitations)
+                        {
+                            <tr>
+                                <td>@invite.Email</td>
+                                <td>@invite.InviteRole</td>
+                                <td>@(invite.InvitedBy?.Email ?? "Unknown")</td>
+                                <td>@invite.ExpiresAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+                                <td class="text-end">
+                                    <form asp-action="RevokeInvite" method="post" class="d-inline">
+                                        <input type="hidden" name="invitationId" value="@invite.Id" />
+                                        <input type="hidden" name="teamId" value="@Model.Team.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="mb-3">Activity Logs</h5>
+        @if (!Model.ActivityLogs.Any())
+        {
+            <p class="text-muted mb-0">No activity logged yet.</p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var activity in Model.ActivityLogs)
+                {
+                    <li class="list-group-item">
+                        <div class="fw-semibold">@activity.ActivityType</div>
+                        <div>@activity.Description</div>
+                        <small class="text-muted">@activity.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</small>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

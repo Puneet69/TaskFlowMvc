@@ -1,0 +1,32 @@
+# Build output
+bin/
+obj/
+
+# IDE/editor
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Local config and secrets
+appsettings.Development.json
+appsettings.*.local.json
+secrets.json
+
+# Logs
+*.log
+*.out.log
+*.err.log
+
+# Local test/session artifacts
+cookies*.txt
+ck*.txt
+gck*.txt
+/g3.txt
+/*.html
+/*_headers.txt
+/*_post_headers.txt
+
+# OS
+Thumbs.db
+.DS_Store

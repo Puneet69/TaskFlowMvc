@@ -1,0 +1,36 @@
+@model List<IGrouping<DateTime, TaskFlowMvc.Models.TaskItem>>
+@{
+    ViewData["Title"] = "Timeline";
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">Timeline</h1>
+    <p class="text-muted mb-0">See tasks grouped by due date across all your projects.</p>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No tasks available for timeline view.</div>
+}
+else
+{
+    <div class="d-flex gap-3 overflow-auto pb-2">
+        @foreach (var group in Model)
+        {
+            <div class="card shadow-sm border-0" style="min-width:280px;max-width:320px;">
+                <div class="card-body">
+                    <h6 class="mb-3">@group.Key.ToString("dd MMM yyyy")</h6>
+                    @foreach (var task in group)
+                    {
+                        <div class="border rounded p-2 mb-2">
+                            <div class="fw-semibold">@task.Title</div>
+                            <small class="d-block text-muted">@task.Description</small>
+                            <span class="badge bg-secondary">@task.Priority</span>
+                            <span class="badge bg-info text-dark">@task.Status</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,103 @@
+@model ReportsViewModel
+@{
+    ViewData["Title"] = "Reports";
+
+    static string FormatMinutes(int minutes)
+    {
+        var h = minutes / 60;
+        var m = minutes % 60;
+        return h > 0 ? $"{h}h {m}m" : $"{m}m";
+    }
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">Reports</h1>
+    <p class="text-muted mb-0">Project productivity and workload report.</p>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">From (UTC)</label>
+                <input type="date" class="form-control" name="fromDateUtc" value="@Model.FromDateUtc.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">To (UTC)</label>
+                <input type="date" class="form-control" name="toDateUtc" value="@Model.ToDateUtc.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Run report</button>
+                <a asp-action="ExportCsv"
+                   asp-route-fromDateUtc="@Model.FromDateUtc.ToString("yyyy-MM-dd")"
+                   asp-route-toDateUtc="@Model.ToDateUtc.ToString("yyyy-MM-dd")"
+                   class="btn btn-outline-secondary">Export CSV</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-2">
+        <div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Projects</small><h4>@Model.TotalProjects</h4></div></div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Tasks</small><h4>@Model.TotalTasks</h4></div></div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Completed</small><h4>@Model.CompletedTasks</h4></div></div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Pending</small><h4>@Model.PendingTasks</h4></div></div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Overdue</small><h4>@Model.OverdueTasks</h4></div></div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Tracked Time</small><h4>@FormatMinutes(Model.TotalTrackedMinutes)</h4></div></div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h5 class="mb-3">Project Breakdown</h5>
+        @if (!Model.Projects.Any())
+        {
+            <p class="text-muted mb-0">No projects found for selected range.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Team</th>
+                        <th>Tasks</th>
+                        <th>Completed</th>
+                        <th>Pending</th>
+                        <th>Overdue</th>
+                        <th>Tracked</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var row in Model.Projects)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-controller="Projects" asp-action="Details" asp-route-id="@row.ProjectId">@row.ProjectName</a>
+                            </td>
+                            <td>@row.TeamName</td>
+                            <td>@row.TotalTasks</td>
+                            <td>@row.CompletedTasks</td>
+                            <td>@row.PendingTasks</td>
+                            <td>@row.OverdueTasks</td>
+                            <td>@FormatMinutes(row.TotalTrackedMinutes)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

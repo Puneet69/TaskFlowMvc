@@ -1,0 +1,139 @@
+@model TaskFlowMvc.ViewModels.DashboardStatsViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">Dashboard</h1>
+    <p class="text-muted mb-0">Track your project progress, team growth, and task velocity.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-2">
+        <div class="card dashboard-stat shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="text-muted">Total Teams</h6>
+                <h2>@Model.TotalTeams</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card dashboard-stat shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="text-muted">Total Projects</h6>
+                <h2>@Model.TotalProjects</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card dashboard-stat shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="text-muted">Pending Tasks</h6>
+                <h2>@Model.PendingTasks</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card dashboard-stat shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="text-muted">Completed Tasks</h6>
+                <h2>@Model.CompletedTasks</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card dashboard-stat shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="text-muted">Due In 7 Days</h6>
+                <h2>@Model.TasksDueSoon</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-2">
+        <div class="card dashboard-stat shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="text-muted">Overdue Tasks</h6>
+                <h2>@Model.OverdueTasks</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12 col-xl-2">
+        <div class="card dashboard-stat shadow-sm border-0">
+            <div class="card-body d-grid">
+                <a asp-controller="Projects" asp-action="Index" class="btn btn-outline-primary btn-sm mb-2">Manage Projects</a>
+                <a asp-controller="Teams" asp-action="Index" class="btn btn-outline-dark btn-sm mb-2">Manage Teams</a>
+                <a asp-controller="Timeline" asp-action="Index" class="btn btn-outline-secondary btn-sm mb-2">Open Timeline</a>
+                <a asp-controller="Notifications" asp-action="Index" class="btn btn-outline-warning btn-sm mb-2">Notifications</a>
+                <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-success btn-sm mb-2">Reports</a>
+                <a asp-controller="Security" asp-action="Index" class="btn btn-outline-info btn-sm">Security</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="mb-3">Task Distribution</h5>
+                <canvas id="taskPieChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="mb-3">Productivity Overview</h5>
+                <canvas id="taskBarChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const pending = @Model.PendingTasks;
+        const completed = @Model.CompletedTasks;
+        const dueSoon = @Model.TasksDueSoon;
+        const totalProjects = @Model.TotalProjects;
+        const overdue = @Model.OverdueTasks;
+
+        new Chart(document.getElementById('taskPieChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Pending', 'Completed', 'Due Soon', 'Overdue'],
+                datasets: [{
+                    data: [pending, completed, dueSoon, overdue],
+                    backgroundColor: ['#ff9800', '#2e7d32', '#d84315', '#c62828']
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('taskBarChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Projects', 'Pending', 'Completed', 'Due Soon', 'Overdue'],
+                datasets: [{
+                    label: 'Count',
+                    data: [totalProjects, pending, completed, dueSoon, overdue],
+                    backgroundColor: ['#1976d2', '#ff9800', '#2e7d32', '#d84315', '#c62828']
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    </script>
+}

@@ -1,0 +1,72 @@
+@model TeamIndexViewModel
+@{
+    ViewData["Title"] = "Teams";
+}
+
+<div class="page-header mb-4">
+    <h1 class="mb-1">Teams</h1>
+    <p class="text-muted mb-0">Create teams, collaborate with members, and manage invites by email.</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h5 class="mb-3">Create Team</h5>
+                <form asp-action="Create" method="post" class="d-grid gap-3">
+                    <div>
+                        <label asp-for="NewTeam.Name" class="form-label"></label>
+                        <input asp-for="NewTeam.Name" class="form-control" />
+                        <span asp-validation-for="NewTeam.Name" class="text-danger"></span>
+                    </div>
+                    <div>
+                        <label asp-for="NewTeam.Description" class="form-label"></label>
+                        <textarea asp-for="NewTeam.Description" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="NewTeam.Description" class="text-danger"></span>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Create Team</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Your Teams</h5>
+                    <span class="badge rounded-pill text-bg-light">@Model.Teams.Count</span>
+                </div>
+
+                @if (!Model.Teams.Any())
+                {
+                    <div class="empty-state">
+                        <h6 class="mb-2">No teams yet</h6>
+                        <p class="text-muted mb-0">Create your first team from the panel on the left.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var team in Model.Teams)
+                        {
+                            var memberCount = team.Members.Count;
+                            <a asp-action="Details" asp-route-id="@team.Id" class="list-group-item list-group-item-action border rounded mb-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="fw-semibold">@team.Name</div>
+                                        <div class="text-muted small">@team.Description</div>
+                                    </div>
+                                    <span class="badge text-bg-primary">@(memberCount == 1 ? "1 member" : $"{memberCount} members")</span>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

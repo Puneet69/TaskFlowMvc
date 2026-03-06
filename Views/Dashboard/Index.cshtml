@@ -1,140 +1,156 @@
 @model TaskFlowMvc.ViewModels.DashboardStatsViewModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "Home";
+
+    var now = DateTime.Now;
+    var greeting = now.Hour < 12 ? "Good morning" : now.Hour < 17 ? "Good afternoon" : "Good evening";
+
+    var rawName = User.Identity?.Name;
+    rawName ??= User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+    rawName ??= User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+    rawName ??= "there";
+    var emailAtIndex = rawName.IndexOf('@');
+    var displayName = emailAtIndex > 0 ? rawName[..emailAtIndex] : rawName;
+
+    var openTasks = Model.PendingTasks + Model.OverdueTasks;
+    var trackedTasks = openTasks + Model.CompletedTasks;
+    var completionRate = trackedTasks > 0
+        ? (int)Math.Round((double)Model.CompletedTasks / trackedTasks * 100)
+        : 0;
 }
 
-<div class="page-header mb-4">
-    <h1 class="mb-1">Dashboard</h1>
-    <p class="text-muted mb-0">Track project health, monitor task flow, and jump to key actions fast.</p>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-md-6 col-xl-2">
-        <div class="card dashboard-stat shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-muted">Total Teams</h6>
-                <h2>@Model.TotalTeams</h2>
-            </div>
-        </div>
+<div class="tf-home-hero">
+    <div>
+        <div class="tf-home-date">@now.ToString("dddd, MMMM d")</div>
+        <h1 class="tf-home-title">@greeting, @displayName</h1>
+        <p class="tf-home-copy">Your work center is ready. Review priorities and move projects forward.</p>
     </div>
-    <div class="col-md-6 col-xl-2">
-        <div class="card dashboard-stat shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-muted">Total Projects</h6>
-                <h2>@Model.TotalProjects</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-2">
-        <div class="card dashboard-stat shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-muted">Pending Tasks</h6>
-                <h2>@Model.PendingTasks</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-2">
-        <div class="card dashboard-stat shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-muted">Completed Tasks</h6>
-                <h2>@Model.CompletedTasks</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-2">
-        <div class="card dashboard-stat shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-muted">Due In 7 Days</h6>
-                <h2>@Model.TasksDueSoon</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 col-xl-2">
-        <div class="card dashboard-stat shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-muted">Overdue Tasks</h6>
-                <h2>@Model.OverdueTasks</h2>
-            </div>
-        </div>
+    <div class="tf-home-pills">
+        <span class="tf-pill tf-pill-strong">My week</span>
+        <span class="tf-pill">@openTasks open tasks</span>
+        <span class="tf-pill">@Model.CompletedTasks completed</span>
+        <a class="tf-pill tf-pill-action" asp-controller="Projects" asp-action="Index">Customize</a>
     </div>
 </div>
 
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body">
-        <div class="d-flex flex-wrap gap-2">
-            <a asp-controller="Projects" asp-action="Index" class="btn btn-outline-primary btn-sm">Manage Projects</a>
-            <a asp-controller="Teams" asp-action="Index" class="btn btn-outline-primary btn-sm">Manage Teams</a>
-            <a asp-controller="Timeline" asp-action="Index" class="btn btn-outline-secondary btn-sm">Open Timeline</a>
-            <a asp-controller="Notifications" asp-action="Index" class="btn btn-outline-secondary btn-sm">Notifications</a>
-            <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-secondary btn-sm">Reports</a>
-            <a asp-controller="Security" asp-action="Index" class="btn btn-outline-secondary btn-sm">Security</a>
-        </div>
-    </div>
-</div>
-
-<div class="row g-3">
-    <div class="col-lg-6">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="mb-3">Task Distribution</h5>
-                <canvas id="taskPieChart" height="220"></canvas>
+<div class="tf-home-layout">
+    <section class="tf-panel">
+        <div class="tf-panel-header">
+            <div>
+                <h2 class="tf-panel-title">My tasks</h2>
+                <p class="tf-panel-subtitle">Keep the day focused on upcoming, overdue, and completed work.</p>
+            </div>
+            <div class="tf-panel-tools">
+                <a asp-controller="Projects" asp-action="Index" class="btn btn-sm btn-outline-primary">Open board</a>
+                <a asp-controller="Projects" asp-action="Index" class="btn btn-sm btn-primary">Create task</a>
             </div>
         </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="card shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="mb-3">Productivity Overview</h5>
-                <canvas id="taskBarChart" height="220"></canvas>
+
+        <div class="tf-task-tabs">
+            <span class="tf-task-tab active">Upcoming</span>
+            <span class="tf-task-tab">Overdue</span>
+            <span class="tf-task-tab">Completed</span>
+        </div>
+
+        <div class="tf-stats-grid">
+            <article class="tf-stat-item">
+                <div class="tf-stat-label">Projects in motion</div>
+                <div class="tf-stat-value">@Model.TotalProjects</div>
+            </article>
+            <article class="tf-stat-item">
+                <div class="tf-stat-label">Pending tasks</div>
+                <div class="tf-stat-value">@Model.PendingTasks</div>
+            </article>
+            <article class="tf-stat-item">
+                <div class="tf-stat-label">Overdue tasks</div>
+                <div class="tf-stat-value">@Model.OverdueTasks</div>
+            </article>
+            <article class="tf-stat-item">
+                <div class="tf-stat-label">Completion rate</div>
+                <div class="tf-stat-value">@completionRate%</div>
+            </article>
+        </div>
+
+        <div class="tf-progress-card">
+            <div class="tf-progress-head">
+                <span>Completion progress</span>
+                <strong>@completionRate%</strong>
+            </div>
+            <div class="tf-progress-track">
+                <span class="tf-progress-bar" style="width:@completionRate%"></span>
+            </div>
+            <small class="text-muted">Completed @Model.CompletedTasks of @trackedTasks tracked tasks</small>
+        </div>
+
+        <div class="tf-quick-actions">
+            <a asp-controller="Teams" asp-action="Index" class="tf-quick-btn">Manage teams</a>
+            <a asp-controller="Timeline" asp-action="Index" class="tf-quick-btn">View timeline</a>
+            <a asp-controller="Reports" asp-action="Index" class="tf-quick-btn">Open reporting</a>
+            <a asp-controller="Notifications" asp-action="Index" class="tf-quick-btn">Check inbox</a>
+        </div>
+    </section>
+
+    <aside class="tf-panel">
+        <div class="tf-panel-header">
+            <div>
+                <h2 class="tf-panel-title">Focus today</h2>
+                <p class="tf-panel-subtitle">A quick snapshot of where your attention is needed.</p>
             </div>
         </div>
-    </div>
+
+        <ul class="tf-focus-list">
+            <li class="tf-focus-item">
+                <span class="tf-focus-label">Teams collaborating</span>
+                <strong>@Model.TotalTeams</strong>
+            </li>
+            <li class="tf-focus-item">
+                <span class="tf-focus-label">Tasks due soon</span>
+                <strong>@Model.TasksDueSoon</strong>
+            </li>
+            <li class="tf-focus-item">
+                <span class="tf-focus-label">Overdue tasks</span>
+                <strong>@Model.OverdueTasks</strong>
+            </li>
+            <li class="tf-focus-item">
+                <span class="tf-focus-label">Projects active</span>
+                <strong>@Model.TotalProjects</strong>
+            </li>
+        </ul>
+
+        <div class="tf-focus-cta">
+            <a asp-controller="Projects" asp-action="Index" class="btn btn-sm btn-primary w-100">Review priorities</a>
+        </div>
+    </aside>
 </div>
 
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const pending = @Model.PendingTasks;
-        const completed = @Model.CompletedTasks;
-        const dueSoon = @Model.TasksDueSoon;
-        const totalProjects = @Model.TotalProjects;
-        const overdue = @Model.OverdueTasks;
+<section class="tf-panel mt-4">
+    <div class="tf-panel-header">
+        <div>
+            <h2 class="tf-panel-title">Learn TaskFlow</h2>
+            <p class="tf-panel-subtitle">Use these shortcuts to improve team velocity and planning quality.</p>
+        </div>
+    </div>
 
-        new Chart(document.getElementById('taskPieChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Pending', 'Completed', 'Due Soon', 'Overdue'],
-                datasets: [{
-                    data: [pending, completed, dueSoon, overdue],
-                    backgroundColor: ['#ff9800', '#2e7d32', '#d84315', '#c62828']
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-
-        new Chart(document.getElementById('taskBarChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Projects', 'Pending', 'Completed', 'Due Soon', 'Overdue'],
-                datasets: [{
-                    label: 'Count',
-                    data: [totalProjects, pending, completed, dueSoon, overdue],
-                    backgroundColor: ['#1976d2', '#ff9800', '#2e7d32', '#d84315', '#c62828']
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 }
-                    }
-                }
-            }
-        });
-    </script>
-}
+    <div class="tf-learn-grid">
+        <article class="tf-learn-card">
+            <div class="tf-learn-icon">R</div>
+            <h3 class="tf-learn-title">Run a weekly review</h3>
+            <p class="tf-learn-copy">Align priorities and close old blockers with a 15-minute review.</p>
+        </article>
+        <article class="tf-learn-card">
+            <div class="tf-learn-icon">A</div>
+            <h3 class="tf-learn-title">Automate recurring work</h3>
+            <p class="tf-learn-copy">Create templates and repeat checklists for predictable delivery.</p>
+        </article>
+        <article class="tf-learn-card">
+            <div class="tf-learn-icon">T</div>
+            <h3 class="tf-learn-title">Improve timeline clarity</h3>
+            <p class="tf-learn-copy">Use milestones and owners so teams can identify delays early.</p>
+        </article>
+        <article class="tf-learn-card">
+            <div class="tf-learn-icon">S</div>
+            <h3 class="tf-learn-title">Strengthen security habits</h3>
+            <p class="tf-learn-copy">Turn on MFA and monitor permissions for safer collaboration.</p>
+        </article>
+    </div>
+</section>

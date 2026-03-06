@@ -25,51 +25,70 @@
     <div class="tf-shell">
         <aside class="tf-sidebar">
             <div class="tf-sidebar-top">
-                <a class="tf-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">
-                    <span class="tf-brand-mark">T</span>
-                    <span class="tf-brand-copy">
-                        <strong>TaskFlow</strong>
-                        <small>Collaboration Workspace</small>
-                    </span>
-                </a>
+                <div class="tf-brand-row">
+                    <button class="tf-menu-button" type="button" aria-label="Navigation menu">&#9776;</button>
+                    <a class="tf-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                        <span class="tf-brand-mark">TF</span>
+                        <span class="tf-brand-copy">
+                            <strong>TaskFlow</strong>
+                            <small>Work Command Center</small>
+                        </span>
+                    </a>
+                </div>
 
-                <div class="tf-sidebar-label">Navigation</div>
-                <nav class="tf-nav-menu">
-                    <a class="@NavClass("Dashboard", "Index")" asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
-                    <a class="@NavClass("Projects", "Index")" asp-area="" asp-controller="Projects" asp-action="Index">Projects</a>
-                    <a class="@NavClass("Teams", "Index")" asp-area="" asp-controller="Teams" asp-action="Index">Teams</a>
-                    <a class="@NavClass("Timeline", "Index")" asp-area="" asp-controller="Timeline" asp-action="Index">Timeline</a>
+                <a class="tf-create-btn" asp-area="" asp-controller="Projects" asp-action="Index">+ Create</a>
+
+                <nav class="tf-nav-group">
+                    <div class="tf-sidebar-label">Workspace</div>
+                    <a class="@NavClass("Dashboard", "Index")" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                        Home
+                    </a>
+                    <a class="@NavClass("Projects", "Index")" asp-area="" asp-controller="Projects" asp-action="Index">
+                        My Tasks
+                    </a>
                     <a class="@NavClass("Notifications", "Index")" asp-area="" asp-controller="Notifications" asp-action="Index">
-                        Notifications
+                        Inbox
                         <span id="notifCountBadge" class="tf-nav-badge d-none">0</span>
                     </a>
-                    <a class="@NavClass("Reports", "Index")" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
-                    <a class="@NavClass("Security", "Index")" asp-area="" asp-controller="Security" asp-action="Index">Security</a>
+                </nav>
+
+                <nav class="tf-nav-group">
+                    <div class="tf-sidebar-label">Insights</div>
+                    <a class="@NavClass("Reports", "Index")" asp-area="" asp-controller="Reports" asp-action="Index">Reporting</a>
+                    <a class="@NavClass("Timeline", "Index")" asp-area="" asp-controller="Timeline" asp-action="Index">Portfolios</a>
+                    <a class="@NavClass("Security", "Index")" asp-area="" asp-controller="Security" asp-action="Index">Goals & Security</a>
+                </nav>
+
+                <nav class="tf-nav-group">
+                    <div class="tf-sidebar-label">Teams</div>
+                    <a class="@NavClass("Projects", "Index")" asp-area="" asp-controller="Projects" asp-action="Index">Project Board</a>
+                    <a class="@NavClass("Teams", "Index")" asp-area="" asp-controller="Teams" asp-action="Index">Team Hub</a>
                     @if (User.IsInRole(AppRoles.Admin))
                     {
-                        <a class="@NavClass("AdminUsers", "Index")" asp-area="" asp-controller="AdminUsers" asp-action="Index">Admin</a>
+                        <a class="@NavClass("AdminUsers", "Index")" asp-area="" asp-controller="AdminUsers" asp-action="Index">Admin Console</a>
                     }
                 </nav>
             </div>
 
             <div class="tf-sidebar-footer">
+                <div class="tf-upgrade-card">
+                    <div class="tf-upgrade-title">Workspace Health</div>
+                    <div class="tf-upgrade-copy">Keep projects organized with shared priorities and team updates.</div>
+                </div>
                 <partial name="_LoginPartial" />
             </div>
         </aside>
 
         <div class="tf-main">
-            <header class="tf-main-header">
-                <div class="tf-main-heading">
-                    <h1 class="tf-main-title">@((ViewData["Title"] as string) ?? "TaskFlow")</h1>
-                    <p class="tf-main-subtitle">Plan, track, and deliver work in one board.</p>
+            <header class="tf-topbar">
+                <div class="tf-topbar-view">@((ViewData["Title"] as string) ?? "Home")</div>
+                <form class="tf-search-wrap" asp-controller="Projects" asp-action="Index" method="get">
+                    <input class="tf-search-input" type="search" name="q" placeholder="Search tasks, projects, people..." />
+                </form>
+                <div class="tf-topbar-actions">
+                    <a asp-controller="Notifications" asp-action="Index" class="tf-topbar-link">Alerts</a>
+                    <a asp-controller="Projects" asp-action="Index" class="tf-topbar-link tf-topbar-link-strong">New Task</a>
                 </div>
-                @if (User.Identity?.IsAuthenticated == true)
-                {
-                    <div class="tf-main-shortcuts">
-                        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-sm btn-outline-primary">Overview</a>
-                        <a asp-controller="Projects" asp-action="Index" class="btn btn-sm btn-primary">Open Projects</a>
-                    </div>
-                }
             </header>
 
             <main role="main" class="tf-main-content">
@@ -98,7 +117,7 @@
             </main>
 
             <footer class="tf-footer">
-                <span>&copy; 2026 - TaskFlow</span>
+                <span>&copy; @DateTime.Now.Year TaskFlow</span>
             </footer>
         </div>
     </div>

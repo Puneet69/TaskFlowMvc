@@ -331,11 +331,48 @@ public class TeamService(ApplicationDbContext dbContext) : ITeamService
         var rows = await dbContext.TaskItems
             .AsNoTracking()
             .Where(t => t.Project != null && t.Project.TeamId == teamId && t.Status != TaskStatus.Completed)
-            .GroupBy(t => t.AssignedToId ?? "Unassigned")
-            .Select(g => new { Assignee = g.Key, Count = g.Count() })
+            .GroupBy(t => t.AssignedToId)
+            .Select(g => new { AssigneeUserId = g.Key, Count = g.Count() })
+            .ToListAsync();
+        var assigneeIds = rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.AssigneeUserId))
+            .Select(r => r.AssigneeUserId!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var assignees = await dbContext.Users
+            .AsNoTracking()
+            .Where(u => assigneeIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.UserName, u.Email })
             .ToListAsync();
 
-        return rows.ToDictionary(r => r.Assignee, r => r.Count, StringComparer.OrdinalIgnoreCase);
+        var namesById = assignees.ToDictionary(
+            u => u.Id,
+            u => ApplicationUser.BuildDisplayName(u.UserName, u.Email),
+            StringComparer.OrdinalIgnoreCase);
+
+        var workloadByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            var key = "Unassigned";
+            if (!string.IsNullOrWhiteSpace(row.AssigneeUserId))
+            {
+                key = namesById.TryGetValue(row.AssigneeUserId, out var name)
+                    ? name
+                    : "User";
+            }
+
+            if (workloadByName.TryGetValue(key, out var existing))
+            {
+                workloadByName[key] = existing + row.Count;
+            }
+            else
+            {
+                workloadByName[key] = row.Count;
+            }
+        }
+
+        return workloadByName;
     }
 
     public async Task<List<TeamActivityLog>> GetTeamActivityLogsAsync(int teamId, string userId, int take = 50)

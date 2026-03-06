@@ -1,18 +1,49 @@
 @model AdminUsersViewModel
 @{
     ViewData["Title"] = "User Management";
+    var totalUsers = Model.Users.Count;
+    var disabledUsers = Model.Users.Count(u => u.User.IsDisabled);
+    var activeUsers = totalUsers - disabledUsers;
 }
 
 <div class="page-header mb-4">
     <h1 class="mb-1">User & Role Management</h1>
-    <p class="text-muted mb-0">Create users, invite by email, assign roles, and disable/enable accounts.</p>
+    <p class="text-muted mb-0">Create users, invite collaborators, assign roles, and manage account status.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card tf-metric-card border-0">
+            <div class="card-body">
+                <div class="tf-metric-label">Total Users</div>
+                <div class="tf-metric-value">@totalUsers</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card tf-metric-card border-0">
+            <div class="card-body">
+                <div class="tf-metric-label">Active</div>
+                <div class="tf-metric-value">@activeUsers</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card tf-metric-card border-0">
+            <div class="card-body">
+                <div class="tf-metric-label">Disabled</div>
+                <div class="tf-metric-value">@disabledUsers</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row g-4 mb-4">
     <div class="col-lg-6">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body">
-                <h5>Create User</h5>
+                <h5 class="tf-card-title">Create User</h5>
+                <p class="tf-card-subtitle">Display name is derived from username/email automatically.</p>
                 <form asp-action="Create" method="post" class="d-grid gap-2">
                     <input asp-for="NewUser.Email" class="form-control" placeholder="email@example.com" />
                     <input asp-for="NewUser.Password" class="form-control" />
@@ -29,7 +60,8 @@
     <div class="col-lg-6">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body">
-                <h5>Invite User by Email</h5>
+                <h5 class="tf-card-title">Invite User by Email</h5>
+                <p class="tf-card-subtitle">Send invitation with selected default role.</p>
                 <form asp-action="Invite" method="post" class="d-grid gap-2">
                     <input asp-for="InviteUser.Email" class="form-control" placeholder="email@example.com" />
                     <select asp-for="InviteUser.Role" class="form-select" asp-items="@(new Microsoft.AspNetCore.Mvc.Rendering.SelectList(Model.AvailableRoles))"></select>
@@ -42,12 +74,12 @@
 
 <div class="card shadow-sm border-0">
     <div class="card-body">
-        <h5 class="mb-3">Users</h5>
+        <h5 class="tf-card-title mb-3">Users</h5>
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead>
                 <tr>
-                    <th>Email</th>
+                    <th>User</th>
                     <th>Role</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -59,7 +91,9 @@
                     var user = row.User;
                     var role = row.Roles.FirstOrDefault() ?? AppRoles.Viewer;
                     <tr>
-                        <td>@user.Email</td>
+                        <td>
+                            <div class="fw-semibold">@user.DisplayName</div>
+                        </td>
                         <td>
                             <form asp-action="SetRole" method="post" class="d-flex gap-2">
                                 <input type="hidden" name="userId" value="@user.Id" />

@@ -75,7 +75,7 @@
                             <option value="">Unassigned</option>
                             @foreach (var member in Model.TeamMembers)
                             {
-                                <option value="@member.UserId">@member.User?.Email</option>
+                                <option value="@member.UserId">@(member.User?.DisplayName ?? "Unknown user")</option>
                             }
                         </select>
                     </div>
@@ -180,7 +180,7 @@
                     <option value="">All assignees</option>
                     @foreach (var member in Model.TeamMembers)
                     {
-                        <option value="@member.UserId" selected="@(Model.AssigneeFilter == member.UserId)">@member.User?.Email</option>
+                        <option value="@member.UserId" selected="@(Model.AssigneeFilter == member.UserId)">@(member.User?.DisplayName ?? "Unknown user")</option>
                     }
                 </select>
             </div>
@@ -206,7 +206,13 @@
         </form>
         <div class="kanban-grid">
             <div class="kanban-column">
-                <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">Todo</button>
+                <div class="kanban-column-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="kanban-dot kanban-dot-todo"></span>
+                        <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">Todo</button>
+                    </div>
+                    <span class="small text-muted">@todo.Count</span>
+                </div>
                 <div class="kanban-list" data-status="Todo">
                     @foreach (var task in todo)
                     {
@@ -218,7 +224,13 @@
                 </div>
             </div>
             <div class="kanban-column">
-                <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">In Progress</button>
+                <div class="kanban-column-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="kanban-dot kanban-dot-progress"></span>
+                        <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">In Progress</button>
+                    </div>
+                    <span class="small text-muted">@inProgress.Count</span>
+                </div>
                 <div class="kanban-list" data-status="InProgress">
                     @foreach (var task in inProgress)
                     {
@@ -230,7 +242,13 @@
                 </div>
             </div>
             <div class="kanban-column">
-                <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">Completed</button>
+                <div class="kanban-column-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="kanban-dot kanban-dot-complete"></span>
+                        <button type="button" class="btn btn-link p-0 kanban-collapse fw-semibold">Completed</button>
+                    </div>
+                    <span class="small text-muted">@completed.Count</span>
+                </div>
                 <div class="kanban-list" data-status="Completed">
                     @foreach (var task in completed)
                     {
@@ -273,7 +291,7 @@
                         <option value="">Unassigned</option>
                         @foreach (var member in Model.TeamMembers)
                         {
-                            <option value="@member.UserId">@member.User?.Email</option>
+                            <option value="@member.UserId">@(member.User?.DisplayName ?? "Unknown user")</option>
                         }
                     </select>
                 </div>
@@ -358,7 +376,7 @@
                                     <option value="">Unassigned</option>
                                     @foreach (var member in Model.TeamMembers)
                                     {
-                                        <option value="@member.UserId" selected="@(task.AssignedToId == member.UserId)">@member.User?.Email</option>
+                                        <option value="@member.UserId" selected="@(task.AssignedToId == member.UserId)">@(member.User?.DisplayName ?? "Unknown user")</option>
                                     }
                                 </select>
                                 <button type="submit" class="btn btn-sm btn-outline-primary">Set</button>
@@ -451,7 +469,7 @@
                                     @foreach (var comment in task.Comments.OrderByDescending(c => c.CreatedAtUtc))
                                     {
                                         <div class="border rounded p-2 mb-2">
-                                            <div class="small text-muted">@comment.AuthorUser?.Email &middot; @comment.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</div>
+                                            <div class="small text-muted">@(comment.AuthorUser?.DisplayName ?? "Unknown user") &middot; @comment.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</div>
                                             <div>@comment.Content</div>
                                             @if (comment.Attachments.Any())
                                             {

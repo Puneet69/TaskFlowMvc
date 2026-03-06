@@ -91,7 +91,9 @@
                     @foreach (var member in Model.Members)
                     {
                         <tr>
-                            <td>@(member.User?.Email ?? "Unknown user")</td>
+                            <td>
+                                <div class="fw-semibold">@(member.User?.DisplayName ?? "Unknown user")</div>
+                            </td>
                             <td>
                                 @if (canManage && member.UserId != currentUserId)
                                 {
@@ -166,7 +168,7 @@
                             <tr>
                                 <td>@invite.Email</td>
                                 <td>@invite.InviteRole</td>
-                                <td>@(invite.InvitedBy?.Email ?? "Unknown")</td>
+                                <td>@(invite.InvitedBy?.DisplayName ?? "Unknown")</td>
                                 <td>@invite.ExpiresAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
                                 <td class="text-end">
                                     <form asp-action="RevokeInvite" method="post" class="d-inline">

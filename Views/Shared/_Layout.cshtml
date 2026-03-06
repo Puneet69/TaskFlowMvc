@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -9,85 +9,100 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/TaskFlowMvc.styles.css" asp-append-version="true" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-4">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-bold" asp-area="" asp-controller="Dashboard" asp-action="Index">TaskFlow</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Projects" asp-action="Index">Projects</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Teams" asp-action="Index">Teams</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Timeline" asp-action="Index">Timeline</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Notifications" asp-action="Index">
-                                Notifications
-                                <span id="notifCountBadge" class="badge bg-danger ms-1 d-none">0</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Security" asp-action="Index">Security</a>
-                        </li>
-                        @if (User.IsInRole(AppRoles.Admin))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="AdminUsers" asp-action="Index">Admin</a>
-                            </li>
-                        }
-                    </ul>
-                    <partial name="_LoginPartial" />
-                </div>
+<body class="tf-body">
+    @{
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+
+        string NavClass(string controller, string? action = null)
+        {
+            var controllerMatch = currentController.Equals(controller, StringComparison.OrdinalIgnoreCase);
+            var actionMatch = string.IsNullOrWhiteSpace(action) || currentAction.Equals(action, StringComparison.OrdinalIgnoreCase);
+            return controllerMatch && actionMatch ? "tf-nav-link active" : "tf-nav-link";
+        }
+    }
+
+    <div class="tf-shell">
+        <aside class="tf-sidebar">
+            <div class="tf-sidebar-top">
+                <a class="tf-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                    <span class="tf-brand-mark">T</span>
+                    <span class="tf-brand-copy">
+                        <strong>TaskFlow</strong>
+                        <small>Collaboration Workspace</small>
+                    </span>
+                </a>
+
+                <div class="tf-sidebar-label">Navigation</div>
+                <nav class="tf-nav-menu">
+                    <a class="@NavClass("Dashboard", "Index")" asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                    <a class="@NavClass("Projects", "Index")" asp-area="" asp-controller="Projects" asp-action="Index">Projects</a>
+                    <a class="@NavClass("Teams", "Index")" asp-area="" asp-controller="Teams" asp-action="Index">Teams</a>
+                    <a class="@NavClass("Timeline", "Index")" asp-area="" asp-controller="Timeline" asp-action="Index">Timeline</a>
+                    <a class="@NavClass("Notifications", "Index")" asp-area="" asp-controller="Notifications" asp-action="Index">
+                        Notifications
+                        <span id="notifCountBadge" class="tf-nav-badge d-none">0</span>
+                    </a>
+                    <a class="@NavClass("Reports", "Index")" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
+                    <a class="@NavClass("Security", "Index")" asp-area="" asp-controller="Security" asp-action="Index">Security</a>
+                    @if (User.IsInRole(AppRoles.Admin))
+                    {
+                        <a class="@NavClass("AdminUsers", "Index")" asp-area="" asp-controller="AdminUsers" asp-action="Index">Admin</a>
+                    }
+                </nav>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @if (TempData["Success"] is string success)
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    @success
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
+            <div class="tf-sidebar-footer">
+                <partial name="_LoginPartial" />
+            </div>
+        </aside>
+
+        <div class="tf-main">
+            <header class="tf-main-header">
+                <div class="tf-main-heading">
+                    <h1 class="tf-main-title">@((ViewData["Title"] as string) ?? "TaskFlow")</h1>
+                    <p class="tf-main-subtitle">Plan, track, and deliver work in one board.</p>
                 </div>
-            }
-            @if (TempData["Info"] is string info)
-            {
-                <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    @info
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            }
-            @if (TempData["Error"] is string error)
-            {
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    @error
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            }
-            @RenderBody()
-        </main>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="tf-main-shortcuts">
+                        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-sm btn-outline-primary">Overview</a>
+                        <a asp-controller="Projects" asp-action="Index" class="btn btn-sm btn-primary">Open Projects</a>
+                    </div>
+                }
+            </header>
+
+            <main role="main" class="tf-main-content">
+                @if (TempData["Success"] is string success)
+                {
+                    <div class="alert alert-success alert-dismissible fade show tf-alert" role="alert">
+                        @success
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["Info"] is string info)
+                {
+                    <div class="alert alert-info alert-dismissible fade show tf-alert" role="alert">
+                        @info
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["Error"] is string error)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show tf-alert" role="alert">
+                        @error
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+
+            <footer class="tf-footer">
+                <span>&copy; 2026 - TaskFlow</span>
+            </footer>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - TaskFlow
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

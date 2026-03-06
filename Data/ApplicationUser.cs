@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
 using TaskFlowMvc.Models;
 
@@ -5,6 +7,10 @@ namespace TaskFlowMvc.Data;
 
 public class ApplicationUser : IdentityUser
 {
+    private static readonly Regex DisplayNameSeparatorRegex = new(@"[._\-]+", RegexOptions.Compiled);
+
+    public string DisplayName => BuildDisplayName(UserName, Email);
+
     public bool IsDisabled { get; set; }
     public DateTime? DisabledAtUtc { get; set; }
     public string DisabledReason { get; set; } = string.Empty;
@@ -24,4 +30,27 @@ public class ApplicationUser : IdentityUser
     public List<TaskComment> TaskComments { get; set; } = new();
     public List<FileAttachment> UploadedFiles { get; set; } = new();
     public List<TimeEntry> TimeEntries { get; set; } = new();
+
+    public static string BuildDisplayName(string? userName, string? email)
+    {
+        var raw = !string.IsNullOrWhiteSpace(userName)
+            ? userName
+            : (!string.IsNullOrWhiteSpace(email) ? email : "User");
+
+        var localPart = raw!;
+        var atIndex = localPart.IndexOf('@');
+        if (atIndex >= 0)
+        {
+            localPart = localPart[..atIndex];
+        }
+
+        var cleaned = DisplayNameSeparatorRegex.Replace(localPart, " ").Trim();
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return "User";
+        }
+
+        var titleCase = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(cleaned.ToLowerInvariant());
+        return titleCase;
+    }
 }

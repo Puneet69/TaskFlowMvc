@@ -1,155 +1,146 @@
 # TaskFlow MVC
 
-TaskFlow MVC is an ASP.NET Core MVC application for team, project, and task collaboration.
+TaskFlow MVC is an ASP.NET Core MVC app for collaborative team, project, and task management.
 
-## Implemented highlights
+## Current implementation status
 
-- Authentication with ASP.NET Core Identity
-- Optional Google OAuth login
-- Email OTP login flow and 2FA support hooks
-- Session timeout and device session tracking
-- Login activity history
-- Admin user management with roles
-- Team, project, milestone, and task management
-- Kanban drag-and-drop status updates
-- Notifications (in-app + email hooks)
-- Real-time notifications via SignalR
-- Task comments with edit/delete
-- User mentions in comments (`@email`, `@username`, `@userId`)
-- Emoji reactions on comments
-- File attachments in comments (docs/images/videos/pdfs)
-- File preview + download endpoints
-- Attachment versioning per task/comment/file name
-- Time tracking (start/stop timer + manual log)
-- Reports dashboard with CSV export
+### Authentication and identity
+- ASP.NET Core Identity login/register/logout.
+- Password policy and account lockout policy.
+- Optional Google OAuth login (enabled only when keys are configured).
+- Email OTP login flow using Identity 2FA email tokens (`Login` -> `LoginWithOtp`).
+- Optional `RequireConfirmedAccount` behavior from config.
+- Automatic verification email reminder filter for signed-in, unconfirmed users (once per session).
+
+### Security and session control
+- Configurable session timeout (`Authentication:SessionTimeoutMinutes`, clamped to 5-720 minutes).
+- Device session tracking via secure cookie claims + DB records.
+- Login activity history (success/failure, 2FA challenge/result, logout).
+- Security dashboard for revoking one device session or logging out all other devices.
+- Disabled users are rejected during cookie validation.
+
+### Roles and admin
+- Roles: `Admin`, `TeamLeader`, `TeamMember`, `Viewer`.
+- Roles are auto-created on startup.
+- If no admins exist, the first registered user is auto-promoted to `Admin`.
+- Admin user management UI for creating users, inviting users by email, changing roles, and disabling/enabling accounts.
+
+### Team management
+- Create teams.
+- Invite members by email with invite role and expiring token.
+- Accept/revoke invites.
+- Change member roles.
+- Remove members.
+- Transfer leadership.
+- Team workload view (open tasks by assignee).
+- Team activity log.
+
+### Project and task management
+- Project CRUD for owners.
+- Project archive action.
+- Optional project-to-team assignment.
+- Project milestones (add + mark complete).
+- Project timeline view (tasks + milestones by date).
+- Global timeline view (all accessible tasks grouped by due date).
+- Task CRUD.
+- Task filtering by status, priority, assignee, and label.
+- Task assignment and status updates.
+- Bulk status update and bulk assignee update.
+- Subtasks.
+- Kanban drag-and-drop status updates (SortableJS + POST to `UpdateTaskStatus`).
+- Task template save action.
+- Recurrence fields can be stored/edited on tasks.
+
+### Collaboration, comments, and files
+- Task comments (add/edit/delete with soft delete).
+- Mentions in comments (`@email`, `@username`, `@userId`) with mention notifications.
+- Emoji reactions on comments.
+- Multi-file attachments on comments.
+- Attachment preview/download endpoints with project access checks: `/Attachments/Preview/{id}` and `/Attachments/Download/{id}`.
+- Attachment versioning for same `task + comment + filename`.
+- Local file storage in `wwwroot/uploads/comments` with path traversal protections.
+
+### Notifications
+- In-app notifications persisted in DB.
+- Optional email notifications through SMTP.
+- SignalR hub at `/hubs/notifications`.
+- Real-time unread badge + toast notifications in layout.
+- Background service checks every 30 minutes for overdue tasks and sends one overdue notification per task/user/day.
+
+### Time tracking and reporting
+- Start/stop timer per task.
+- Only one active timer per user at a time (starting a new one ends the previous).
+- Manual time log entry.
+- Tracked minutes shown per task in project details.
+- Reports dashboard with date-range filtering and CSV export.
+
+## Partially wired / known gaps
+- `CreateTaskFromTemplate` endpoint exists, but there is no UI flow to select and create from saved templates.
+- Task dependency service/actions exist (`AddDependency`, `RemoveDependency`), but current views do not expose dependency management forms.
+- Recurrence metadata is stored on tasks, but there is no scheduler/background job that automatically spawns future recurring tasks.
+- No dedicated automated test project is currently included.
+
+## Tech stack
+- .NET 10 (`net10.0`)
+- ASP.NET Core MVC + Identity
+- Entity Framework Core 10 (SQL Server provider)
+- SignalR
+- Bootstrap 5, Chart.js, SortableJS
 
 ## Prerequisites
+1. .NET 10 SDK
+2. SQL Server LocalDB (or another SQL Server instance)
+3. `dotnet-ef` tool
 
-1. Windows with SQL Server LocalDB installed.
-2. .NET 10 SDK installed.
-3. `dotnet-ef` tool installed.
-
-Check SDK:
-
-```powershell
-dotnet --version
-```
-
-Install EF tool (if missing):
+Install `dotnet-ef` if needed:
 
 ```powershell
 dotnet tool install --global dotnet-ef
 ```
 
-## Run from scratch (step by step)
+## Configuration
 
-1. Open terminal and move to the project:
+Main settings are in `appsettings.json` / `appsettings.Development.json`:
 
-```powershell
-cd C:\Users\PuneetGupta\Desktop\TaskFlowMvc
-```
+- `ConnectionStrings:DefaultConnection`
+- `Authentication:RequireConfirmedAccount`
+- `Authentication:SessionTimeoutMinutes`
+- `Authentication:EnableEmailOtp2fa`
+- `Authentication:Google:ClientId`
+- `Authentication:Google:ClientSecret`
+- `Email:Smtp:*` (for OTP/notification/invite emails)
 
-2. Restore packages:
-
-```powershell
-dotnet restore
-```
-
-3. Configure connection string.
-
-Use `appsettings.Development.json` (or user-secrets) and ensure `ConnectionStrings:DefaultConnection` points to LocalDB, for example:
-
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=(localdb)\\MSSQLLocalDB;Database=TaskFlowMvcDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
-}
-```
-
-4. (Optional) Configure secrets for Google login and SMTP:
+Use user-secrets for sensitive values:
 
 ```powershell
 dotnet user-secrets init
-dotnet user-secrets set "Authentication:Google:ClientId" "your-google-client-id"
-dotnet user-secrets set "Authentication:Google:ClientSecret" "your-google-client-secret"
+dotnet user-secrets set "Authentication:Google:ClientId" "your-client-id"
+dotnet user-secrets set "Authentication:Google:ClientSecret" "your-client-secret"
 dotnet user-secrets set "Email:Smtp:Host" "smtp.gmail.com"
 dotnet user-secrets set "Email:Smtp:Port" "587"
-dotnet user-secrets set "Email:Smtp:Username" "yourgmail@gmail.com"
+dotnet user-secrets set "Email:Smtp:Username" "your-email"
 dotnet user-secrets set "Email:Smtp:Password" "your-app-password"
-dotnet user-secrets set "Email:Smtp:FromEmail" "yourgmail@gmail.com"
+dotnet user-secrets set "Email:Smtp:FromEmail" "your-email"
 dotnet user-secrets set "Email:Smtp:FromName" "TaskFlow MVC"
 dotnet user-secrets set "Email:Smtp:EnableSsl" "true"
 ```
 
-5. Apply database migrations:
+## Run locally
 
 ```powershell
-dotnet ef database update --project C:\Users\PuneetGupta\Desktop\TaskFlowMvc\TaskFlowMvc.csproj
+cd C:\Users\PuneetGupta\Desktop\TaskFlowMvc
+dotnet restore
+dotnet ef database update --project .\TaskFlowMvc.csproj
+dotnet build .\TaskFlowMvc.csproj
+dotnet run --launch-profile https
 ```
 
-6. Build the project:
-
-```powershell
-dotnet build C:\Users\PuneetGupta\Desktop\TaskFlowMvc\TaskFlowMvc.csproj
-```
-
-7. Run the app:
-
-```powershell
-dotnet run
-```
-
-8. Open in browser:
-
-`https://localhost:5000`
-
-## First-run notes
-
-- The first registered user is auto-promoted to `Admin` if no admin exists.
-- Uploaded comment files are saved under `wwwroot/uploads/comments`.
-- Attachments are served through authorized endpoints:
-  - `/Attachments/Preview/{id}`
-  - `/Attachments/Download/{id}`
-- Notification hub endpoint:
-  - `/hubs/notifications`
+Launch profile is configured with dynamic ports (`https://127.0.0.1:0;http://127.0.0.1:0`), so use the exact URL shown by `dotnet run` output.
 
 ## Useful commands
 
-Build only:
-
 ```powershell
-dotnet build C:\Users\PuneetGupta\Desktop\TaskFlowMvc\TaskFlowMvc.csproj
+dotnet build .\TaskFlowMvc.csproj
+dotnet ef migrations list --project .\TaskFlowMvc.csproj
+dotnet run --launch-profile https
 ```
-
-Run tests:
-
-```powershell
-dotnet test C:\Users\PuneetGupta\Desktop\TaskFlowMvc\TaskFlowMvc.csproj
-```
-
-List migrations:
-
-```powershell
-dotnet ef migrations list --project C:\Users\PuneetGupta\Desktop\TaskFlowMvc\TaskFlowMvc.csproj
-```
-
-## Troubleshooting
-
-1. `dotnet ef` not found:
-- Install: `dotnet tool install --global dotnet-ef`
-- Restart terminal.
-
-2. Database update errors:
-- Confirm LocalDB is installed.
-- Verify connection string.
-- Re-run `dotnet ef database update`.
-
-3. Google login button not visible:
-- Set both `Authentication:Google:ClientId` and `Authentication:Google:ClientSecret`.
-
-4. Email/OTP not sending:
-- Use Gmail App Password for SMTP.
-- Verify all `Email:Smtp:*` values.
-
-5. Attachment preview/download fails:
-- Check file exists under `wwwroot/uploads/comments`.
-- Confirm authenticated user has access to the project/task.

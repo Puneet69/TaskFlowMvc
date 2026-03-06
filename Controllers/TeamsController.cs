@@ -73,7 +73,7 @@ public class TeamsController(ITeamService teamService, IEmailSender emailSender,
         var vm = new TeamDetailsViewModel
         {
             Team = team,
-            Members = team.Members.OrderBy(m => m.Role).ThenBy(m => m.User?.Email ?? string.Empty).ToList(),
+            Members = team.Members.OrderBy(m => m.Role).ThenBy(m => m.User?.DisplayName ?? string.Empty).ToList(),
             PendingInvitations = team.Invitations
                 .Where(i => !i.IsAccepted && i.ExpiresAt > DateTime.UtcNow)
                 .OrderByDescending(i => i.CreatedAt)
